@@ -1,0 +1,172 @@
+---
+title: "20230525_PROPEL_programming_project_SS"
+output: html_document
+date: "2023-05-23"
+---
+
+# **Top Hits Spotify from 2000-2019**
+
+This dataset contains audio statistics of the top 2000 tracks on Spotify from 2000-2019.
+
+Research Question: Is there a relationship between song danceability and song popularity?
+
+download dataset at this link: <https://www.kaggle.com/datasets/paradisejoy/top-hits-spotify-from-20002019>
+
+## Install and Load Packages
+
+```{r}
+install.packages("tidyverse")
+install.packages("ggpubr")
+install.packages("dplyr")
+install.packages("csvread")
+install.packages("pals")
+
+library(tidyverse)
+library(ggpubr)
+library(dplyr)
+library(csvread)
+library(pals)
+```
+
+## Import Dataset to R
+
+```{r}
+songs_normalize <- read_csv("songs_normalize.csv", +     
+col_types = cols(year = col_number(), +         
+popularity = col_number(), danceability = col_number()))
+
+View(songs_normalize)
+```
+
+## General Dataset Characterization
+
+How many artists are included in this dataset?
+
+```{r}
+artists <- songs_normalize %>% summarise(unique(artist))
+
+view(artists)
+```
+
+What genres are represented by this dataset?
+
+```{r}
+genres <- songs_normalize %>% summarise(unique(genre))
+
+view(genres)
+```
+
+What song has the highest popularity score?
+
+```{r}
+rank <- songs_normalize %>% arrange(desc(popularity))
+
+view(rank)
+```
+
+Which artist has the most number of songs in this top hits dataset?
+
+```{r}
+popular <- songs_normalize %>% count(artist) %>% arrange(desc(n))
+
+view(popular)
+```
+
+Visualization #1:
+
+```{r}
+#Subset out top 15 artists with most number of hit songs throughout the years
+top15 <- popular[1:15,]
+
+#Create bar plot visualizing top 15 artists with most number of hit songs
+top_artists <- top15 %>% ggplot(mapping = aes(x=artist, y=n, fill=artist)) +
+geom_bar(stat = "identity") +
+labs(x = "Top 15 Artists", y = "Number of Hit Songs", fill="Artists", title="Artists with Most Number of Hit Songs on Spotify from 2000-2019") + 
+theme_minimal() + scale_fill_manual(values=as.vector(cols25(15)))
+
+top_artists
+```
+
+## Statistical Analysis
+
+What is the distribution of this data?
+
+```{r}
+hist <- songs_normalize %>% ggplot(mapping = aes(x=danceability)) + geom_histogram(fill="pink") + theme_minimal()
+
+hist 
+
+hist1 <- songs_normalize %>% ggplot(mapping = aes(x=popularity)) + geom_histogram(fill="purple") + theme_minimal()
+
+hist1
+```
+
+Subset top 15 artists with most number of top spotify hits
+
+```{r}
+top15 <- songs_normalize %>% filter(artist %in%  c("Ariana Grande","Beyoncé", "Black Eyed Peas", "Britney Spears", "Calvin Harris", "Chris Brown", "Coldplay", "David Guetta", "Drake", "Eminem", "Kanye West", "Katy Perry", "P!nk", "Rihanna", "Taylor Swift")) %>% select(artist, danceability, popularity)
+
+view(top15)
+```
+
+Calculate Median of Danceability and Popularity Scores for Each Top 15 Artist
+
+```{r}
+top15median <- top15 %>% select(artist, danceability, popularity) %>% group_by(artist) %>% mutate(median_danceability = median(danceability)) %>% mutate(median_popularity = median(popularity)) %>% arrange(artist)
+
+view(top15median)
+```
+
+## Spearman's Correlation Test
+
+```{r}
+spear_test <- cor.test(top15median$median_danceability, top15median$median_popularity, method = "spearman")
+
+spear_test
+```
+
+## Plot Spearman's Test Result
+
+Visualization #2
+
+```{r}
+spearman_plot <- ggscatter(top15median, x = "median_danceability", y = "median_popularity", color = "artist", add = "reg.line", conf.int = TRUE, cor.coef = TRUE, cor.method = "spearman", xlab = "Median Danceability", ylab = "Median Popularity", title = "Spearman's Correlation Plot of Danceability vs. Popularity of the Top 15 Artists' Hit Songs on Spotify from 2000-2019", size=4) + geom_smooth(method = lm, color = "black") + scale_color_manual(values=as.vector(cols25(15))) + theme(legend.position = "right")
+
+spearman_plot
+```
+
+Research Question: Is there a relationship between song danceability and song popularity?
+
+Answer: There is a statistically significant negative correlation between song danceability and song popularity among the top 15 artists represented in this dataset (R = -0.15; p = 0.018).
+
+Validity of Analysis: When looking at song danceability versus song popularity using all of the artists and their songs in this dataset, there is no statistically significant correlation. There is also missing metadata about the collection methodology, and explaining for example, how danceability and popularity scores were assigned to each song. When looking at data from Rihanna alone, there is a positive trend between song danceability and popularity. When looking at data from Drake alone, there doesn't seem to be a meaningful trend between song danceability and popularity. Therefore, the correlation between song danceability and popularity depends on the artist and possibly on other variables not analyzed here as well.
+
+Implications: Surprisingly, amongst the top 15 artists represented in this dataset, their song danceability is negatively correlated with popularity. This implies that the more popularly ranked songs are songs that you can't necessarily dance to but are a good listen. However, more analysis will need to be done to see what other variables do correlate with popularity, such as speechiness or instrumentalness. Also, since Rihanna has the most number of top hit songs in this dataset, this implies that the people want another Rihanna album!
+
+## Citations
+
+Dataset:
+
+-   <https://www.kaggle.com/datasets/paradisejoy/top-hits-spotify-from-20002019>
+
+Data Manipulation:
+
+-   <https://posit.cloud/learn/primers>
+
+-   <https://courses.ucsf.edu/course/view.php?id=9381#section-11>
+
+Visualization:
+
+-   <https://r-graph-gallery.com/index.html>
+
+-   <https://msmith7161.github.io/what-is-speechiness/>
+
+-   <https://github.com/kwstat/pals>
+
+Statistics:
+
+-   <https://www.statology.org/test-for-normality-in-r/>
+
+-   <http://www.sthda.com/english/wiki/correlation-test-between-two-variables-in-r>
+
+-   <https://smin95.github.io/dataviz/basics-of-ggplot2-and-correlation-plot.html>
